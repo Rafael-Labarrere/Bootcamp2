@@ -4,12 +4,12 @@ Sistema de gerenciamento de tarefas em linha de comando (CLI), desenvolvido em P
 
 Fase atual: Fase 2 — Entrega Intermediária (Git/GitHub, implementação em Python e validação das regras de negócio).
 
-Autor
+Sobre o Autor
 Nome: Rafael Afonso Labarrère
 Curso: Ciências da Computação
 Polo: Asa Norte
 E-mail institucional: rafael.labarrere@sempreceub.com
-Descrição
+Descrição:
 
 No dia a dia pessoal e profissional, a falta de um método estruturado para controlar tarefas leva à desorganização, ao esquecimento de compromissos e à perda de prazos. O TaskTracker funciona como um organizador centralizado, permitindo cadastrar tarefas com prioridade e prazo e visualizá-las de forma clara no terminal.
 
