@@ -57,7 +57,7 @@ bash
 git clone https://github.com/Rafael-Labarrere/Bootcamp2.git
 
 # 2. Acesse a pasta do projeto
-cd tasktracker-projeto
+cd Bootcamp2
 
 # 3. Execute a aplicação
 python src/main.py
