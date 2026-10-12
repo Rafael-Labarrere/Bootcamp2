@@ -52,7 +52,7 @@ Cada tarefa é representada por um dicionário Python:
 ## Estrutura do Repositório
 
 ```
-tasktracker-projeto/
+Bootcamp2/
 ├── README.md                      # Documentação principal e instruções de uso
 ├── .gitignore                     # Ignora arquivos temporários do Python e ambiente virtual
 ├── docs/
