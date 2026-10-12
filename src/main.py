@@ -36,12 +36,12 @@ def cadastrar_tarefa():
 
     # Validação da prioridade: deve ser Alta, Média ou Baixa
     while True:
-        prioridade = input("Prioridade (1. Alta/2. Média/3. Baixa): ")
-        if prioridade == "1":
+        prioridade = input("Prioridade (1. Alta/2. Média/3. Baixa): ").strip().capitalize()
+        if prioridade == "1" or prioridade == "Alta":
             prioridade = "Alta"
-        elif prioridade == "2":
+        elif prioridade == "2" or prioridade == "Média" or prioridade == "Media":
             prioridade = "Média"
-        elif prioridade == "3":
+        elif prioridade == "3" or prioridade == "Baixa":
             prioridade = "Baixa"
         else:
             print("Opção inválida. Escolha 1, 2 ou 3.")
