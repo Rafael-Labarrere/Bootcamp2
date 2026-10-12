@@ -1,7 +1,7 @@
 """TaskTracker - Gerenciador de tarefas em linha de comando.
 
-Parte 1: menu principal e loop contínuo.
-(As validações de título e prioridade entram na parte 2.)
+Parte 2: Validação de dados e melhorias na interface.
+
 """
 
 # Lista principal: guarda todas as tarefas (cada tarefa é um dicionário)
@@ -20,13 +20,25 @@ def exibir_menu():
 
 
 def cadastrar_tarefa():
-    #Pede os dados da tarefa e salva na lista (sem validação por enquanto).
+    #Pede os dados da tarefa e salva na lista.
     global proximo_id
 
+    dsasasd
     print("\n--- CADASTRO DE NOVA TAREFA ---")
-    titulo = input("Título: ")
+    while True:    
+        titulo = input("Título: ")
+        if titulo.strip():
+            break
+        print("O título não pode estar vazio.")
+
     descricao = input("Descrição: ")
-    prioridade = input("Prioridade (Alta/Média/Baixa): ")
+
+    while True:
+        prioridade = input("Prioridade (Alta/Média/Baixa): ")
+        if prioridade in ["Alta", "Média", "Baixa"]:
+            break
+        print("Prioridade inválida. Escolha entre Alta, Média ou Baixa.")
+
     data_limite = input("Data limite (DD/MM/AAAA): ")
 
     tarefa = {
