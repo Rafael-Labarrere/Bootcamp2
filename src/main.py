@@ -23,7 +23,7 @@ def cadastrar_tarefa():
     #Pede os dados da tarefa e salva na lista.
     global proximo_id
 
-    dsasasd
+    # Validação do título: não pode ser vazio
     print("\n--- CADASTRO DE NOVA TAREFA ---")
     while True:    
         titulo = input("Título: ")
@@ -31,14 +31,24 @@ def cadastrar_tarefa():
             break
         print("O título não pode estar vazio.")
 
+    #Descrição pode ser vazia
     descricao = input("Descrição: ")
 
+    # Validação da prioridade: deve ser Alta, Média ou Baixa
     while True:
-        prioridade = input("Prioridade (Alta/Média/Baixa): ")
-        if prioridade in ["Alta", "Média", "Baixa"]:
-            break
-        print("Prioridade inválida. Escolha entre Alta, Média ou Baixa.")
+        prioridade = input("Prioridade (1. Alta/2. Média/3. Baixa): ")
+        if prioridade == "1":
+            prioridade = "Alta"
+        elif prioridade == "2":
+            prioridade = "Média"
+        elif prioridade == "3":
+            prioridade = "Baixa"
+        else:
+            print("Opção inválida. Escolha 1, 2 ou 3.")
+            continue
+        break
 
+    #Data limite sem validação
     data_limite = input("Data limite (DD/MM/AAAA): ")
 
     tarefa = {
