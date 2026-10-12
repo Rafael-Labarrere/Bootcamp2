@@ -39,7 +39,7 @@ Cada tarefa é representada por um dicionário Python:
 ## Regras de Negócio
 
 1. **Obrigatoriedade de título:** títulos vazios ou compostos só por espaços são rejeitados, e o sistema pede nova digitação até receber um título válido.
-2. **Restrição de prioridade:** apenas `Alta`, `Média`/`Media` e `Baixa` são aceitas. Qualquer outro valor gera mensagem de erro e repete a pergunta.
+2. **Restrição de prioridade:** apenas `Alta`, `Média`/`Media` e `Baixa` são aceitas (também é possível digitar `1`, `2` ou `3`, sem diferenciar maiúsculas de minúsculas). Qualquer outro valor gera mensagem de erro e repete a pergunta.
 3. **Identificação única:** cada tarefa recebe um ID incremental automaticamente.
 4. **Status inicial:** toda tarefa nasce como `Pendente`.
 5. **Lista vazia:** se não houver tarefas, o sistema informa que não existem registros no momento.
@@ -89,14 +89,29 @@ Escolha uma opção: 1
 
 --- CADASTRO DE NOVA TAREFA ---
 Título: 
-O título é obrigatório. Por favor, digite um título válido.
+O título não pode estar vazio.
 Título: Elaborar relatório de vendas
 Descrição: Consolidar planilhas do 3º trimestre em PDF
-Prioridade (Alta/Média/Baixa): Urgente
-Opção inválida. Escolha Alta, Média ou Baixa.
-Prioridade (Alta/Média/Baixa): Alta
+Prioridade (1. Alta/2. Média/3. Baixa): Urgente
+Opção inválida. Escolha 1, 2 ou 3.
+Prioridade (1. Alta/2. Média/3. Baixa): Alta
 Data limite (DD/MM/AAAA): 30/10/2026
 Tarefa 'Elaborar relatório de vendas' cadastrada com sucesso!
+
+===== TASKTRACKER =====
+1. Cadastrar nova tarefa
+2. Visualizar tarefas cadastradas
+3. Sair
+Escolha uma opção: 2
+
+--- LISTA DE TAREFAS ---
+ID: 1
+Título: Elaborar relatório de vendas
+Descrição: Consolidar planilhas do 3º trimestre em PDF
+Prioridade: Alta
+Data limite: 30/10/2026
+Status: Pendente
+------------------------------
 ```
 
 ## Roadmap do Bootcamp II
@@ -113,3 +128,5 @@ O histórico de commits acompanha a evolução do projeto:
 2. Estrutura principal em `src/main.py` (menu e loop principal).
 3. Funções de validação (título não vazio e prioridades).
 4. Publicação remota no GitHub (`origin main`).
+
+O desenvolvimento do código foi feito na branch `feature/menu-principal` e depois mesclado na `main`.
