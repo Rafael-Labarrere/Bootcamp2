@@ -2,7 +2,7 @@
 
 Sistema de gerenciamento de tarefas em linha de comando (CLI), desenvolvido em Python 3 como parte do **Bootcamp II** (Engenharia de Software, Versionamento de Código e Desenvolvimento de Sistemas).
 
-> **Fase atual:** Fase 2 — Entrega Intermediária (Git/GitHub, implementação em Python e validação das regras de negócio).
+> **Fase atual:** Fase 3 — Entrega Final (conteinerização com Docker, orquestração com Docker Compose e deploy).
 
 ## Autor
 
@@ -48,6 +48,7 @@ Cada tarefa é representada por um dicionário Python:
 
 - [Python 3](https://www.python.org/) (somente biblioteca padrão)
 - Git e GitHub para versionamento
+- [Docker](https://www.docker.com/) e Docker Compose para conteinerização e orquestração
 
 ## Estrutura do Repositório
 
@@ -57,8 +58,10 @@ Bootcamp2/
 ├── .gitignore                     # Ignora arquivos temporários do Python e ambiente virtual
 ├── docs/
 │   └── planejamento_logico.pdf    # Planejamento lógico e arquitetural (Fase 1)
-└── src/
-    └── main.py                    # Código-fonte principal da aplicação
+├── src/
+│   └── main.py                    # Código-fonte principal da aplicação (Fase 2)
+├── Dockerfile                     # Receita da imagem Docker (Fase 3)
+└── docker-compose.yml             # Orquestração da execução interativa (Fase 3)
 ```
 
 ## Instalação e Execução
@@ -77,6 +80,51 @@ python src/main.py
 ```
 
 > Em alguns sistemas (Linux/macOS), use `python3 src/main.py`.
+
+## Execução com Docker (Fase 3)
+
+**Pré-requisito:** [Docker](https://docs.docker.com/get-docker/) instalado e em execução (o Docker Compose já vem incluído nas versões atuais).
+
+```bash
+# 1. Clone o repositório e acesse a pasta
+git clone https://github.com/Rafael-Labarrere/Bootcamp2.git
+cd Bootcamp2
+```
+
+**Como construir a imagem:**
+
+```bash
+docker build -t tasktracker-app .
+```
+
+**Como rodar o container em modo isolado:**
+
+```bash
+docker run -it tasktracker-app
+```
+
+**Como rodar via orquestração (Recomendado):**
+
+```bash
+docker compose run --rm tasktracker
+```
+
+### Por que `-it`, `stdin_open` e `tty`?
+
+O TaskTracker é uma CLI interativa que usa `input()`. Por padrão, um container é isolado e não recebe entrada do teclado. Por isso:
+
+- `-it` (no `docker run`) ou `stdin_open: true` + `tty: true` (no `docker-compose.yml`) mantêm a entrada de dados aberta e alocam um terminal virtual.
+- `ENV PYTHONUNBUFFERED=1` no `Dockerfile` garante que as mensagens apareçam imediatamente no terminal, sem buffer.
+
+### Dockerfile vs. docker-compose.yml
+
+| | `Dockerfile` (a receita) | `docker-compose.yml` (o maestro) |
+|---|---|---|
+| **Papel** | Empacota a aplicação e suas dependências | Orquestra a execução interativa da CLI |
+| **Saída** | Gera a imagem | Roda o container com os parâmetros necessários |
+| **Comando-chave** | `docker build` | `docker compose run` |
+
+> Os dados das tarefas ficam apenas em memória: ao encerrar o container (opção 3), a lista é perdida.
 
 ## Exemplo de Uso
 
@@ -117,8 +165,8 @@ Status: Pendente
 ## Roadmap do Bootcamp II
 
 - [x] **Fase 1:** Planejamento lógico, decomposição do problema e algoritmo em português.
-- [ ] **Fase 2:** Estruturação do repositório, versionamento com Git/GitHub e implementação em Python *(em andamento)*.
-- [ ] **Fase 3:** Empacotamento, containerização com Docker, testes e deploy.
+- [x] **Fase 2:** Estruturação do repositório, versionamento com Git/GitHub e implementação em Python.
+- [x] **Fase 3:** Empacotamento, containerização com Docker, orquestração com Docker Compose e deploy.
 
 ## Versionamento
 
