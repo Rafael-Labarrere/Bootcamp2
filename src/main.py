@@ -4,11 +4,50 @@ Parte 2: Validação de dados e melhorias na interface.
 
 """
 
+import json
+import os
+
+# Arquivo onde as tarefas são salvas (fica em data/tarefas.json, na raiz do projeto,
+# independente da pasta de onde o programa for executado)
+PASTA_DADOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+ARQUIVO_TAREFAS = os.path.join(PASTA_DADOS, "tarefas.json")
+
 # Lista principal: guarda todas as tarefas (cada tarefa é um dicionário)
 tarefas = []
 
 # Contador para gerar IDs incrementais e únicos
 proximo_id = 1
+
+
+def carregar_tarefas():
+    #Lê as tarefas do arquivo JSON (se existir) e atualiza o próximo ID.
+    global tarefas, proximo_id
+
+    if not os.path.exists(ARQUIVO_TAREFAS):
+        return  # primeira execução: começa vazio
+
+    try:
+        with open(ARQUIVO_TAREFAS, "r", encoding="utf-8") as arquivo:
+            tarefas = json.load(arquivo)
+    except (json.JSONDecodeError, OSError):
+        print("Aviso: não foi possível ler o arquivo de tarefas. Iniciando com lista vazia.")
+        tarefas = []
+        return
+
+    # Continua a numeração a partir do maior ID já existente
+    proximo_id = max((t["id"] for t in tarefas), default=0) + 1
+
+
+def salvar_tarefas():
+    #Grava a lista de tarefas no arquivo JSON.
+    os.makedirs(PASTA_DADOS, exist_ok=True)
+    caminho_temp = ARQUIVO_TAREFAS + ".tmp"
+
+    # Escreve num arquivo temporário e depois substitui, evitando corromper
+    # o arquivo original caso o programa seja interrompido durante a gravação
+    with open(caminho_temp, "w", encoding="utf-8") as arquivo:
+        json.dump(tarefas, arquivo, ensure_ascii=False, indent=2)
+    os.replace(caminho_temp, ARQUIVO_TAREFAS)
 
 
 def exibir_menu():
@@ -62,6 +101,7 @@ def cadastrar_tarefa():
 
     tarefas.append(tarefa)
     proximo_id += 1  # o próximo cadastro terá um ID novo
+    salvar_tarefas()  # persiste imediatamente em disco
 
     print(f"Tarefa '{titulo}' cadastrada com sucesso!")
 
@@ -86,6 +126,7 @@ def visualizar_tarefas():
 
 def main():
     #Loop principal: repete o menu até o usuário escolher sair.
+    carregar_tarefas()  # recupera as tarefas salvas em execuções anteriores
     while True:
         exibir_menu()
         opcao = input("Escolha uma opção: ").strip()
