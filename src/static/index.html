@@ -52,6 +52,9 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .editando{border-color:var(--brand)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 20%,transparent),var(--shadow)!important}
 .ed{border:1.5px solid var(--line);background:transparent;color:var(--text);border-radius:8px;padding:2px 10px;font:inherit;font-size:.8rem;cursor:pointer}
 .ed:hover{border-color:var(--brand);color:var(--brand)}
+.ed.del:hover{border-color:var(--alta);color:var(--alta)}
+.ed.sim{background:var(--alta);border-color:var(--alta);color:#fff;font-weight:600}
+.conf{color:var(--alta);font-size:.8rem;font-weight:600;margin-right:4px}
 .tarefa.fim h3>span:first-child{text-decoration:line-through;opacity:.6}
 .tag.ok{--c:var(--baixa)}.tag.and{--c:var(--media)}
 select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit}
@@ -85,7 +88,7 @@ select:focus{outline:none;border-color:var(--brand)}
       <div class="erro" id="erro" role="alert"></div>
       <button class="btn" type="submit" id="btnSalvar">Cadastrar tarefa</button>
       <button class="btn sec" type="button" id="btnCancelar" hidden>Cancelar edição</button>
-      <p class="dica"><kbd>Esc</kbd> cancela a edição · <kbd>Enter</kbd> no título ou <kbd>Ctrl</kbd>+<kbd>Enter</kbd> na descrição para salvar.</p>
+      <p class="dica"><kbd>Esc</kbd> cancela a edição ou exclusão · <kbd>Enter</kbd> no título ou <kbd>Ctrl</kbd>+<kbd>Enter</kbd> na descrição para salvar.</p>
     </form>
   </section>
   <section class="card">
@@ -99,7 +102,7 @@ select:focus{outline:none;border-color:var(--brand)}
 <div id="toast" role="status"></div>
 <script>
 const COR={Alta:"var(--alta)","Média":"var(--media)",Baixa:"var(--baixa)"};
-let tarefas=[],filtro="Todas",editandoId=null;
+let tarefas=[],filtro="Todas",editandoId=null,confirmandoId=null;
 const $=id=>document.getElementById(id);
 
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
@@ -136,19 +139,39 @@ function desenhar(){
     const c=el("article","tarefa");c.style.setProperty("--c",COR[t.prioridade]);
     if(t.status==="Concluída")c.classList.add("fim");
     const h=el("h3");h.append(el("span",0,t.titulo));
-    const dir=el("span");dir.append(el("span","id","#"+t.id+" "));
+    const dir=el("span");
     const be=el("button","ed","✏️ Editar");be.type="button";be.onclick=()=>modoEdicao(t);
-    dir.append(be);h.append(dir);c.append(h);
+    dir.append(be," ");
+    if(confirmandoId===t.id){
+      const q=el("span","conf","Excluir?");
+      const sim=el("button","ed sim","Sim, excluir");sim.type="button";sim.onclick=()=>excluir(t);
+      const nao=el("button","ed","Não");nao.type="button";nao.onclick=()=>{confirmandoId=null;desenhar()};
+      dir.append(q,sim," ",nao);
+    }else{
+      const bx=el("button","ed del","🗑️ Excluir");bx.type="button";
+      bx.onclick=()=>{confirmandoId=t.id;desenhar()};dir.append(bx);
+    }
+    h.append(dir);c.append(h);
     if(t.descricao)c.append(el("p",0,t.descricao));
     const tags=el("div","tags");const p=el("span","tag","Prioridade "+t.prioridade);p.style.setProperty("--c",COR[t.prioridade]);
     tags.append(p,el("span","tag n","📅 "+(t.data_limite||"Sem prazo")),el("span","tag "+(t.status==="Concluída"?"ok":t.status==="Em andamento"?"and":"n"),t.status));
     c.append(tags);lista.append(c)});
 }
 
+async function excluir(t){
+  try{
+    const r=await fetch(`/api/tarefas/${t.id}`,{method:"DELETE"});
+    if(!r.ok&&r.status!==404){const d=await r.json();toast(d.erro||"Erro ao excluir.",true);return}
+    tarefas=tarefas.filter(x=>x.id!==t.id);confirmandoId=null;
+    if(editandoId===t.id)modoEdicao(null);
+    desenhar();toast(r.ok?`Tarefa #${t.id} excluída.`:"Essa tarefa já não existe mais.");
+  }catch{toast("Não foi possível conectar ao servidor.",true)}
+}
+
 async function carregar(){
   try{tarefas=await(await fetch("/api/tarefas")).json()}catch{tarefas=[]}desenhar()}
 
-function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),2200)}
+function toast(msg,err){const t=$("toast");t.textContent=msg;t.style.background=err?"var(--alta)":"";t.classList.add("on");setTimeout(()=>t.classList.remove("on"),2200)}
 function erro(msg){const e=$("erro");e.textContent=msg;e.style.display=msg?"block":"none"}
 
 $("form").addEventListener("submit",async ev=>{
@@ -171,7 +194,8 @@ $("form").addEventListener("submit",async ev=>{
   }catch{erro("Não foi possível conectar ao servidor.")}
 });
 $("btnCancelar").onclick=()=>modoEdicao(null);
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&editandoId!==null)modoEdicao(null)});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
+  if(confirmandoId!==null){confirmandoId=null;desenhar()}else if(editandoId!==null)modoEdicao(null)});
 $("descricao").addEventListener("keydown",e=>{if(e.ctrlKey&&e.key==="Enter")$("form").requestSubmit()});
 carregar();
 </script>

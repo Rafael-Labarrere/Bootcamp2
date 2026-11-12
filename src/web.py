@@ -120,6 +120,20 @@ class Handler(BaseHTTPRequestHandler):
             core.salvar_tarefas()
         self._responder(200, tarefa)
 
+    def do_DELETE(self):
+        achou = re.fullmatch(r"/api/tarefas/(\d+)", self.path)
+        if not achou:
+            return self._responder(404, {"erro": "Não encontrado."})
+        id_tarefa = int(achou.group(1))
+
+        with trava:
+            tarefa = next((t for t in core.tarefas if t["id"] == id_tarefa), None)
+            if tarefa is None:
+                return self._responder(404, {"erro": "Tarefa não encontrada."})
+            core.tarefas.remove(tarefa)
+            core.salvar_tarefas()
+        self._responder(200, {"id": id_tarefa, "excluida": True})
+
     def log_message(self, *args):  # silencia o log de cada requisição
         pass
 

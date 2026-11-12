@@ -38,5 +38,21 @@
     "data_limite": "21/11/2026",
     "id": 5,
     "status": "Pendente"
+  },
+  {
+    "titulo": "Github",
+    "descricao": "Continuar a melhorar o portifólio Github",
+    "prioridade": "Baixa",
+    "data_limite": "21/11/2026",
+    "id": 8,
+    "status": "Pendente"
+  },
+  {
+    "titulo": "JAVA",
+    "descricao": "Começar a estudar JAVA e fazer calculadora com 4 operações.",
+    "prioridade": "Média",
+    "data_limite": "21/11/2026",
+    "id": 9,
+    "status": "Pendente"
   }
 ]
