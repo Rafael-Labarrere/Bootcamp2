@@ -15,6 +15,7 @@ h1{margin:0;font-size:1.7rem;letter-spacing:-.02em}h1 span{color:var(--brand)}
 header p{margin:2px 0 0;color:var(--muted)}
 main{max-width:1100px;margin:auto;padding:16px 20px 40px;display:grid;grid-template-columns:380px 1fr;gap:22px;align-items:start}
 @media(max-width:860px){main{grid-template-columns:1fr}}
+.listas{display:grid;gap:22px;align-content:start}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px}
 h2{margin:0 0 14px;font-size:1.1rem}
 label{display:block;font-weight:600;font-size:.88rem;margin:14px 0 6px}
@@ -91,13 +92,21 @@ select:focus{outline:none;border-color:var(--brand)}
       <p class="dica"><kbd>Esc</kbd> cancela a edição ou exclusão · <kbd>Enter</kbd> no título ou <kbd>Ctrl</kbd>+<kbd>Enter</kbd> na descrição para salvar.</p>
     </form>
   </section>
-  <section class="card">
-    <div class="topo">
-      <h2>Tarefas <span id="cont" style="color:var(--muted);font-weight:400"></span></h2>
-      <div class="filtros" id="filtros"></div>
-    </div>
-    <div id="lista"></div>
-  </section>
+  <div class="listas">
+    <section class="card">
+      <div class="topo">
+        <h2>Tarefas <span id="cont" style="color:var(--muted);font-weight:400"></span></h2>
+        <div class="filtros" id="filtros"></div>
+      </div>
+      <div id="lista"></div>
+    </section>
+    <section class="card">
+      <div class="topo">
+        <h2>Tarefas concluídas <span id="contConcluidas" style="color:var(--muted);font-weight:400"></span></h2>
+      </div>
+      <div id="listaConcluidas"></div>
+    </section>
+  </div>
 </main>
 <div id="toast" role="status"></div>
 <script>
@@ -130,12 +139,19 @@ function desenhar(){
   ["Todas","Alta","Média","Baixa"].forEach(f=>{
     const b=el("button","chip",f);b.type="button";b.setAttribute("aria-pressed",f===filtro);
     b.onclick=()=>{filtro=f;desenhar()};filtros.append(b)});
-  const vis=tarefas.filter(t=>filtro==="Todas"||t.prioridade===filtro).slice().reverse();
+  const ativas=tarefas.filter(t=>t.status!=="Concluída");
+  const vis=ativas.filter(t=>filtro==="Todas"||t.prioridade===filtro).slice().reverse();
+  const concluidas=tarefas.filter(t=>t.status==="Concluída").slice().reverse();
   $("cont").textContent=`(${vis.length})`;
-  const lista=$("lista");lista.replaceChildren();
-  if(!vis.length){const v=el("div","vazio");v.append(el("b",0,"📝"),
-    el("span",0,tarefas.length?"Nenhuma tarefa com essa prioridade.":"Nenhuma tarefa cadastrada até o momento."));lista.append(v);return}
-  vis.forEach(t=>{
+  $("contConcluidas").textContent=`(${concluidas.length})`;
+  desenharLista($("lista"),vis,ativas.length?"Nenhuma tarefa com essa prioridade.":"Nenhuma tarefa pendente ou em andamento.");
+  desenharLista($("listaConcluidas"),concluidas,"Nenhuma tarefa concluída.");
+}
+
+function desenharLista(lista,itens,mensagemVazia){
+  lista.replaceChildren();
+  if(!itens.length){const v=el("div","vazio");v.append(el("b",0,"📝"),el("span",0,mensagemVazia));lista.append(v);return}
+  itens.forEach(t=>{
     const c=el("article","tarefa");c.style.setProperty("--c",COR[t.prioridade]);
     if(t.status==="Concluída")c.classList.add("fim");
     const h=el("h3");h.append(el("span",0,t.titulo));
