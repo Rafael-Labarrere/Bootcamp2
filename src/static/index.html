@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaskTracker</title>
+<style>
+:root{--bg:#f4f5fb;--card:#fff;--text:#1f2340;--muted:#6b7090;--line:#e3e5f1;--brand:#5b5bd6;--brand-d:#4747b8;
+--alta:#e5484d;--media:#f5a524;--baixa:#30a46c;--shadow:0 8px 30px rgba(40,40,100,.08);color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#12131c;--card:#1b1d2b;--text:#eceef9;--muted:#9a9fc0;--line:#2c2f45;--brand:#7c7cf0;--brand-d:#9b9bff;--shadow:0 8px 30px rgba(0,0,0,.35);color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+header{padding:28px 20px 8px;max-width:1100px;margin:auto}
+h1{margin:0;font-size:1.7rem;letter-spacing:-.02em}h1 span{color:var(--brand)}
+header p{margin:2px 0 0;color:var(--muted)}
+main{max-width:1100px;margin:auto;padding:16px 20px 40px;display:grid;grid-template-columns:380px 1fr;gap:22px;align-items:start}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px}
+h2{margin:0 0 14px;font-size:1.1rem}
+label{display:block;font-weight:600;font-size:.88rem;margin:14px 0 6px}
+label small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=date],textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:transparent;color:var(--text);font:inherit}
+textarea{resize:vertical;min-height:84px}
+input:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 25%,transparent)}
+.prio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.prio input{position:absolute;opacity:0}
+.prio label{margin:0;text-align:center;padding:10px 6px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer;font-weight:600;transition:.15s}
+.prio label:hover{border-color:var(--c)}
+.prio input:checked+label{background:var(--c);border-color:var(--c);color:#fff}
+.prio input:focus-visible+label{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 35%,transparent)}
+.btn{margin-top:20px;width:100%;padding:12px;border:0;border-radius:10px;background:var(--brand);color:#fff;font:inherit;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{background:var(--brand-d)}.btn:active{transform:scale(.98)}
+.erro{display:none;margin-top:14px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--alta) 14%,transparent);color:var(--alta);font-size:.9rem;font-weight:600}
+.dica{margin:12px 0 0;color:var(--muted);font-size:.8rem}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font-size:.78rem}
+.topo{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.topo h2{margin:0}
+.filtros{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--line);background:transparent;color:var(--text);padding:5px 12px;border-radius:99px;font:inherit;font-size:.85rem;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:#fff}
+.tarefa{border:1px solid var(--line);border-left:5px solid var(--c);border-radius:12px;padding:14px 16px;margin-bottom:12px;animation:in .25s}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.tarefa h3{margin:0;font-size:1.02rem;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.tarefa .id{color:var(--muted);font-weight:400;font-size:.8rem}
+.tarefa p{margin:6px 0 10px;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.tags{display:flex;gap:8px;flex-wrap:wrap;font-size:.78rem;font-weight:600}
+.tag{padding:3px 10px;border-radius:99px;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c)}
+.tag.n{--c:var(--muted)}
+.vazio{text-align:center;color:var(--muted);padding:36px 10px}.vazio b{display:block;font-size:2rem}
+#toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,80px);background:var(--baixa);color:#fff;padding:11px 20px;border-radius:99px;font-weight:600;box-shadow:var(--shadow);transition:.3s;opacity:0}
+#toast.on{transform:translate(-50%,0);opacity:1}
+</style>
+</head>
+<body>
+<header><h1>Task<span>Tracker</span></h1><p>Organize suas tarefas com prioridade e prazo.</p></header>
+<main>
+  <section class="card">
+    <h2>Nova tarefa</h2>
+    <form id="form" novalidate>
+      <label for="titulo">Título <small>(obrigatório)</small></label>
+      <input type="text" id="titulo" autocomplete="off" autofocus placeholder="Ex.: Elaborar relatório de vendas">
+      <label for="descricao">Descrição</label>
+      <textarea id="descricao" placeholder="Detalhes da tarefa (opcional)"></textarea>
+      <label>Prioridade</label>
+      <div class="prio">
+        <span style="--c:var(--alta)"><input type="radio" name="prioridade" id="p1" value="Alta"><label for="p1">Alta</label></span>
+        <span style="--c:var(--media)"><input type="radio" name="prioridade" id="p2" value="Média" checked><label for="p2">Média</label></span>
+        <span style="--c:var(--baixa)"><input type="radio" name="prioridade" id="p3" value="Baixa"><label for="p3">Baixa</label></span>
+      </div>
+      <label for="data">Data limite</label>
+      <input type="date" id="data">
+      <div class="erro" id="erro" role="alert"></div>
+      <button class="btn" type="submit">Cadastrar tarefa</button>
+      <p class="dica"><kbd>Enter</kbd> no título ou <kbd>Ctrl</kbd>+<kbd>Enter</kbd> na descrição para salvar.</p>
+    </form>
+  </section>
+  <section class="card">
+    <div class="topo">
+      <h2>Tarefas <span id="cont" style="color:var(--muted);font-weight:400"></span></h2>
+      <div class="filtros" id="filtros"></div>
+    </div>
+    <div id="lista"></div>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+<script>
+const COR={Alta:"var(--alta)","Média":"var(--media)",Baixa:"var(--baixa)"};
+let tarefas=[],filtro="Todas";
+const $=id=>document.getElementById(id);
+
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
+function dataBR(iso){const[a,m,d]=iso.split("-");return `${d}/${m}/${a}`}
+
+function desenhar(){
+  const filtros=$("filtros");filtros.replaceChildren();
+  ["Todas","Alta","Média","Baixa"].forEach(f=>{
+    const b=el("button","chip",f);b.type="button";b.setAttribute("aria-pressed",f===filtro);
+    b.onclick=()=>{filtro=f;desenhar()};filtros.append(b)});
+  const vis=tarefas.filter(t=>filtro==="Todas"||t.prioridade===filtro).slice().reverse();
+  $("cont").textContent=`(${vis.length})`;
+  const lista=$("lista");lista.replaceChildren();
+  if(!vis.length){const v=el("div","vazio");v.append(el("b",0,"📝"),
+    el("span",0,tarefas.length?"Nenhuma tarefa com essa prioridade.":"Nenhuma tarefa cadastrada até o momento."));lista.append(v);return}
+  vis.forEach(t=>{
+    const c=el("article","tarefa");c.style.setProperty("--c",COR[t.prioridade]);
+    const h=el("h3",0,t.titulo);h.append(el("span","id","#"+t.id));c.append(h);
+    if(t.descricao)c.append(el("p",0,t.descricao));
+    const tags=el("div","tags");const p=el("span","tag","Prioridade "+t.prioridade);p.style.setProperty("--c",COR[t.prioridade]);
+    tags.append(p,el("span","tag n","📅 "+(t.data_limite||"Sem prazo")),el("span","tag n",t.status));
+    c.append(tags);lista.append(c)});
+}
+
+async function carregar(){
+  try{tarefas=await(await fetch("/api/tarefas")).json()}catch{tarefas=[]}desenhar()}
+
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),2200)}
+function erro(msg){const e=$("erro");e.textContent=msg;e.style.display=msg?"block":"none"}
+
+$("form").addEventListener("submit",async ev=>{
+  ev.preventDefault();erro("");
+  const titulo=$("titulo").value.trim();
+  if(!titulo){erro("O título é obrigatório.");$("titulo").focus();return}
+  const iso=$("data").value;
+  const corpo={titulo,descricao:$("descricao").value,
+    prioridade:document.querySelector("input[name=prioridade]:checked").value,
+    data_limite:iso?dataBR(iso):""};
+  try{
+    const r=await fetch("/api/tarefas",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)});
+    const d=await r.json();
+    if(!r.ok){erro(d.erro||"Erro ao salvar.");return}
+    tarefas.push(d);filtro="Todas";desenhar();
+    $("form").reset();$("titulo").focus();toast(`Tarefa "${d.titulo}" cadastrada com sucesso!`);
+  }catch{erro("Não foi possível conectar ao servidor.")}
+});
+$("descricao").addEventListener("keydown",e=>{if(e.ctrlKey&&e.key==="Enter")$("form").requestSubmit()});
+carregar();
+</script>
+</body>
+</html>

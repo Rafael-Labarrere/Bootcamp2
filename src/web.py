@@ -1,0 +1,109 @@
+"""TaskTracker - Interface web local (usa somente a biblioteca padrão).
+
+Uso:  python src/web.py   ->  abre http://127.0.0.1:8000 no navegador.
+Reaproveita a lista de tarefas e a persistência em JSON do main.py.
+"""
+
+import json
+import os
+import threading
+import webbrowser
+from datetime import datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+import main as core  # tarefas, carregar_tarefas() e salvar_tarefas()
+
+HOST = os.environ.get("HOST", "127.0.0.1")  # no Docker use HOST=0.0.0.0
+PORT = int(os.environ.get("PORT", "8000"))
+PASTA_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+PRIORIDADES = {"alta": "Alta", "média": "Média", "media": "Média", "baixa": "Baixa"}
+
+trava = threading.Lock()  # evita duas gravações simultâneas
+
+
+def validar(dados):
+    """Aplica as regras de negócio. Retorna (tarefa_limpa, erro)."""
+    titulo = str(dados.get("titulo", "")).strip()
+    if not titulo:
+        return None, "O título é obrigatório."
+
+    prioridade = PRIORIDADES.get(str(dados.get("prioridade", "")).strip().lower())
+    if not prioridade:
+        return None, "Escolha a prioridade: Alta, Média ou Baixa."
+
+    data_limite = str(dados.get("data_limite", "")).strip()
+    if data_limite:
+        try:
+            datetime.strptime(data_limite, "%d/%m/%Y")
+        except ValueError:
+            return None, "Data inválida. Use o formato DD/MM/AAAA."
+
+    return {
+        "titulo": titulo,
+        "descricao": str(dados.get("descricao", "")).strip(),
+        "prioridade": prioridade,
+        "data_limite": data_limite,
+    }, None
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _responder(self, codigo, corpo, tipo="application/json; charset=utf-8"):
+        if not isinstance(corpo, bytes):
+            corpo = json.dumps(corpo, ensure_ascii=False).encode("utf-8")
+        self.send_response(codigo)
+        self.send_header("Content-Type", tipo)
+        self.send_header("Content-Length", str(len(corpo)))
+        self.end_headers()
+        self.wfile.write(corpo)
+
+    def do_GET(self):
+        if self.path == "/api/tarefas":
+            with trava:
+                return self._responder(200, core.tarefas)
+        if self.path in ("/", "/index.html"):
+            with open(os.path.join(PASTA_STATIC, "index.html"), "rb") as f:
+                return self._responder(200, f.read(), "text/html; charset=utf-8")
+        self._responder(404, {"erro": "Não encontrado."})
+
+    def do_POST(self):
+        if self.path != "/api/tarefas":
+            return self._responder(404, {"erro": "Não encontrado."})
+        try:
+            tamanho = int(self.headers.get("Content-Length", 0))
+            dados = json.loads(self.rfile.read(tamanho) or b"{}")
+        except (ValueError, json.JSONDecodeError):
+            return self._responder(400, {"erro": "Requisição inválida."})
+
+        tarefa, erro = validar(dados)
+        if erro:
+            return self._responder(400, {"erro": erro})
+
+        with trava:
+            tarefa["id"] = core.proximo_id
+            tarefa["status"] = "Pendente"
+            core.tarefas.append(tarefa)
+            core.proximo_id += 1
+            core.salvar_tarefas()
+        self._responder(201, tarefa)
+
+    def log_message(self, *args):  # silencia o log de cada requisição
+        pass
+
+
+def main():
+    core.carregar_tarefas()
+    servidor = ThreadingHTTPServer((HOST, PORT), Handler)
+    url = f"http://{'127.0.0.1' if HOST == '0.0.0.0' else HOST}:{PORT}"
+    print(f"TaskTracker rodando em {url}  (Ctrl+C para encerrar)")
+    if HOST != "0.0.0.0":
+        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+    try:
+        servidor.serve_forever()
+    except KeyboardInterrupt:
+        print("\nEncerrando o TaskTracker. Até logo!")
+    finally:
+        servidor.server_close()
+
+
+if __name__ == "__main__":
+    main()

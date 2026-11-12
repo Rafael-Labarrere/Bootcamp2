@@ -6,5 +6,29 @@
     "prioridade": "Média",
     "data_limite": "20/11/2026",
     "status": "Pendente"
+  },
+  {
+    "titulo": "LER",
+    "descricao": "Continuar a leitura de Machiavelli - \"O Príncipe\" ( 20 minutos por dia)",
+    "prioridade": "Média",
+    "data_limite": "21/11/2026",
+    "id": 2,
+    "status": "Pendente"
+  },
+  {
+    "titulo": "Academia",
+    "descricao": "Ir a academia ao menos 5x na semana",
+    "prioridade": "Alta",
+    "data_limite": "20/11/2026",
+    "id": 3,
+    "status": "Pendente"
+  },
+  {
+    "titulo": "Estágios",
+    "descricao": "Estudar oportunidades de estágios e enviar candidatura a ao menos 4.",
+    "prioridade": "Alta",
+    "data_limite": "20/11/2026",
+    "id": 4,
+    "status": "Pendente"
   }
 ]
