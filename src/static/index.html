@@ -47,6 +47,15 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .tag{padding:3px 10px;border-radius:99px;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c)}
 .tag.n{--c:var(--muted)}
 .vazio{text-align:center;color:var(--muted);padding:36px 10px}.vazio b{display:block;font-size:2rem}
+.btn.sec{background:transparent;color:var(--muted);border:1.5px solid var(--line);margin-top:10px}
+.btn.sec:hover{background:var(--line)}
+.editando{border-color:var(--brand)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 20%,transparent),var(--shadow)!important}
+.ed{border:1.5px solid var(--line);background:transparent;color:var(--text);border-radius:8px;padding:2px 10px;font:inherit;font-size:.8rem;cursor:pointer}
+.ed:hover{border-color:var(--brand);color:var(--brand)}
+.tarefa.fim h3>span:first-child{text-decoration:line-through;opacity:.6}
+.tag.ok{--c:var(--baixa)}.tag.and{--c:var(--media)}
+select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit}
+select:focus{outline:none;border-color:var(--brand)}
 #toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,80px);background:var(--baixa);color:#fff;padding:11px 20px;border-radius:99px;font-weight:600;box-shadow:var(--shadow);transition:.3s;opacity:0}
 #toast.on{transform:translate(-50%,0);opacity:1}
 </style>
@@ -54,8 +63,8 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 <body>
 <header><h1>Task<span>Tracker</span></h1><p>Organize suas tarefas com prioridade e prazo.</p></header>
 <main>
-  <section class="card">
-    <h2>Nova tarefa</h2>
+  <section class="card" id="cardForm">
+    <h2 id="tituloForm">Nova tarefa</h2>
     <form id="form" novalidate>
       <label for="titulo">Título <small>(obrigatório)</small></label>
       <input type="text" id="titulo" autocomplete="off" autofocus placeholder="Ex.: Elaborar relatório de vendas">
@@ -69,9 +78,14 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
       </div>
       <label for="data">Data limite</label>
       <input type="date" id="data">
+      <div id="blocoStatus" hidden>
+        <label for="status">Status</label>
+        <select id="status"><option>Pendente</option><option>Em andamento</option><option>Concluída</option></select>
+      </div>
       <div class="erro" id="erro" role="alert"></div>
-      <button class="btn" type="submit">Cadastrar tarefa</button>
-      <p class="dica"><kbd>Enter</kbd> no título ou <kbd>Ctrl</kbd>+<kbd>Enter</kbd> na descrição para salvar.</p>
+      <button class="btn" type="submit" id="btnSalvar">Cadastrar tarefa</button>
+      <button class="btn sec" type="button" id="btnCancelar" hidden>Cancelar edição</button>
+      <p class="dica"><kbd>Esc</kbd> cancela a edição · <kbd>Enter</kbd> no título ou <kbd>Ctrl</kbd>+<kbd>Enter</kbd> na descrição para salvar.</p>
     </form>
   </section>
   <section class="card">
@@ -85,11 +99,28 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 <div id="toast" role="status"></div>
 <script>
 const COR={Alta:"var(--alta)","Média":"var(--media)",Baixa:"var(--baixa)"};
-let tarefas=[],filtro="Todas";
+let tarefas=[],filtro="Todas",editandoId=null;
 const $=id=>document.getElementById(id);
 
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
 function dataBR(iso){const[a,m,d]=iso.split("-");return `${d}/${m}/${a}`}
+function dataISO(br){const p=br.split("/");return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:""}
+
+function modoEdicao(t){
+  editandoId=t?t.id:null;
+  const ed=!!t;
+  $("tituloForm").textContent=ed?`Editando tarefa #${t.id}`:"Nova tarefa";
+  $("btnSalvar").textContent=ed?"Salvar alterações":"Cadastrar tarefa";
+  $("btnCancelar").hidden=!ed;$("blocoStatus").hidden=!ed;
+  $("cardForm").classList.toggle("editando",ed);
+  erro("");
+  if(ed){
+    $("titulo").value=t.titulo;$("descricao").value=t.descricao;
+    document.querySelector(`input[name=prioridade][value="${t.prioridade}"]`).checked=true;
+    $("data").value=dataISO(t.data_limite);$("status").value=t.status;
+    $("titulo").focus();$("cardForm").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }else{$("form").reset()}
+}
 
 function desenhar(){
   const filtros=$("filtros");filtros.replaceChildren();
@@ -103,10 +134,14 @@ function desenhar(){
     el("span",0,tarefas.length?"Nenhuma tarefa com essa prioridade.":"Nenhuma tarefa cadastrada até o momento."));lista.append(v);return}
   vis.forEach(t=>{
     const c=el("article","tarefa");c.style.setProperty("--c",COR[t.prioridade]);
-    const h=el("h3",0,t.titulo);h.append(el("span","id","#"+t.id));c.append(h);
+    if(t.status==="Concluída")c.classList.add("fim");
+    const h=el("h3");h.append(el("span",0,t.titulo));
+    const dir=el("span");dir.append(el("span","id","#"+t.id+" "));
+    const be=el("button","ed","✏️ Editar");be.type="button";be.onclick=()=>modoEdicao(t);
+    dir.append(be);h.append(dir);c.append(h);
     if(t.descricao)c.append(el("p",0,t.descricao));
     const tags=el("div","tags");const p=el("span","tag","Prioridade "+t.prioridade);p.style.setProperty("--c",COR[t.prioridade]);
-    tags.append(p,el("span","tag n","📅 "+(t.data_limite||"Sem prazo")),el("span","tag n",t.status));
+    tags.append(p,el("span","tag n","📅 "+(t.data_limite||"Sem prazo")),el("span","tag "+(t.status==="Concluída"?"ok":t.status==="Em andamento"?"and":"n"),t.status));
     c.append(tags);lista.append(c)});
 }
 
@@ -124,14 +159,19 @@ $("form").addEventListener("submit",async ev=>{
   const corpo={titulo,descricao:$("descricao").value,
     prioridade:document.querySelector("input[name=prioridade]:checked").value,
     data_limite:iso?dataBR(iso):""};
+  const ed=editandoId!==null;
+  if(ed)corpo.status=$("status").value;
   try{
-    const r=await fetch("/api/tarefas",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)});
+    const r=await fetch(ed?`/api/tarefas/${editandoId}`:"/api/tarefas",{method:ed?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)});
     const d=await r.json();
     if(!r.ok){erro(d.erro||"Erro ao salvar.");return}
-    tarefas.push(d);filtro="Todas";desenhar();
-    $("form").reset();$("titulo").focus();toast(`Tarefa "${d.titulo}" cadastrada com sucesso!`);
+    if(ed){tarefas=tarefas.map(t=>t.id===d.id?d:t)}else{tarefas.push(d);filtro="Todas"}
+    modoEdicao(null);desenhar();$("titulo").focus();
+    toast(ed?`Tarefa #${d.id} atualizada com sucesso!`:`Tarefa "${d.titulo}" cadastrada com sucesso!`);
   }catch{erro("Não foi possível conectar ao servidor.")}
 });
+$("btnCancelar").onclick=()=>modoEdicao(null);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&editandoId!==null)modoEdicao(null)});
 $("descricao").addEventListener("keydown",e=>{if(e.ctrlKey&&e.key==="Enter")$("form").requestSubmit()});
 carregar();
 </script>

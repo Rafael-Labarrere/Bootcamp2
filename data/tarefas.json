@@ -4,7 +4,7 @@
     "titulo": "Assistir 2 aulas do curso CS50",
     "descricao": "Acessar Learning.edx e assistir ao menos 2 aulas até o fim da semana!",
     "prioridade": "Média",
-    "data_limite": "20/11/2026",
+    "data_limite": "21/11/2026",
     "status": "Pendente"
   },
   {
@@ -19,7 +19,7 @@
     "titulo": "Academia",
     "descricao": "Ir a academia ao menos 5x na semana",
     "prioridade": "Alta",
-    "data_limite": "20/11/2026",
+    "data_limite": "21/11/2026",
     "id": 3,
     "status": "Pendente"
   },
@@ -27,8 +27,16 @@
     "titulo": "Estágios",
     "descricao": "Estudar oportunidades de estágios e enviar candidatura a ao menos 4.",
     "prioridade": "Alta",
-    "data_limite": "20/11/2026",
+    "data_limite": "21/11/2026",
     "id": 4,
+    "status": "Pendente"
+  },
+  {
+    "titulo": "Investimentos",
+    "descricao": "Tirar dinheiro da aplicação atual e estudar oportunidades melhores",
+    "prioridade": "Média",
+    "data_limite": "21/11/2026",
+    "id": 5,
     "status": "Pendente"
   }
 ]

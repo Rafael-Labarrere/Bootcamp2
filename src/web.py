@@ -6,6 +6,7 @@ Reaproveita a lista de tarefas e a persistência em JSON do main.py.
 
 import json
 import os
+import re
 import threading
 import webbrowser
 from datetime import datetime
@@ -17,6 +18,8 @@ HOST = os.environ.get("HOST", "127.0.0.1")  # no Docker use HOST=0.0.0.0
 PORT = int(os.environ.get("PORT", "8000"))
 PASTA_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 PRIORIDADES = {"alta": "Alta", "média": "Média", "media": "Média", "baixa": "Baixa"}
+
+STATUS = ("Pendente", "Em andamento", "Concluída")
 
 trava = threading.Lock()  # evita duas gravações simultâneas
 
@@ -38,12 +41,20 @@ def validar(dados):
         except ValueError:
             return None, "Data inválida. Use o formato DD/MM/AAAA."
 
-    return {
+    campos = {
         "titulo": titulo,
         "descricao": str(dados.get("descricao", "")).strip(),
         "prioridade": prioridade,
         "data_limite": data_limite,
-    }, None
+    }
+
+    # Status é opcional (usado na edição); no cadastro é sempre "Pendente"
+    if "status" in dados:
+        if dados["status"] not in STATUS:
+            return None, "Status inválido. Use Pendente, Em andamento ou Concluída."
+        campos["status"] = dados["status"]
+
+    return campos, None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -85,6 +96,29 @@ class Handler(BaseHTTPRequestHandler):
             core.proximo_id += 1
             core.salvar_tarefas()
         self._responder(201, tarefa)
+
+    def do_PUT(self):
+        achou = re.fullmatch(r"/api/tarefas/(\d+)", self.path)
+        if not achou:
+            return self._responder(404, {"erro": "Não encontrado."})
+        id_tarefa = int(achou.group(1))
+        try:
+            tamanho = int(self.headers.get("Content-Length", 0))
+            dados = json.loads(self.rfile.read(tamanho) or b"{}")
+        except (ValueError, json.JSONDecodeError):
+            return self._responder(400, {"erro": "Requisição inválida."})
+
+        campos, erro = validar(dados)
+        if erro:
+            return self._responder(400, {"erro": erro})
+
+        with trava:
+            tarefa = next((t for t in core.tarefas if t["id"] == id_tarefa), None)
+            if tarefa is None:
+                return self._responder(404, {"erro": "Tarefa não encontrada."})
+            tarefa.update(campos)  # o ID nunca muda
+            core.salvar_tarefas()
+        self._responder(200, tarefa)
 
     def log_message(self, *args):  # silencia o log de cada requisição
         pass
