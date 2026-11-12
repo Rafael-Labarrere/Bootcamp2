@@ -13,3 +13,6 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Dados pessoais
+data/tarefas.json
