@@ -23,6 +23,13 @@ STATUS = ("Pendente", "Em andamento", "Concluída")
 
 trava = threading.Lock()  # evita duas gravações simultâneas
 
+TAMANHO_MAX_SUBTAREFA = 120
+
+
+def buscar_tarefa(id_tarefa):
+    """Retorna a tarefa com esse ID (ou None). Chamar dentro de `with trava`."""
+    return next((t for t in core.tarefas if t["id"] == id_tarefa), None)
+
 
 def validar(dados):
     """Aplica as regras de negócio. Retorna (tarefa_limpa, erro)."""
@@ -67,6 +74,15 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
+    def _ler_json(self):
+        """Lê o corpo da requisição como objeto JSON (dict). Retorna None se inválido."""
+        try:
+            tamanho = int(self.headers.get("Content-Length", 0))
+            dados = json.loads(self.rfile.read(tamanho) or b"{}")
+        except (ValueError, json.JSONDecodeError):
+            return None
+        return dados if isinstance(dados, dict) else None
+
     def do_GET(self):
         if self.path == "/api/tarefas":
             with trava:
@@ -77,6 +93,9 @@ class Handler(BaseHTTPRequestHandler):
         self._responder(404, {"erro": "Não encontrado."})
 
     def do_POST(self):
+        achou = re.fullmatch(r"/api/tarefas/(\d+)/subtarefas", self.path)
+        if achou:
+            return self._adicionar_subtarefa(int(achou.group(1)))
         if self.path != "/api/tarefas":
             return self._responder(404, {"erro": "Não encontrado."})
         try:
@@ -92,6 +111,7 @@ class Handler(BaseHTTPRequestHandler):
         with trava:
             tarefa["id"] = core.proximo_id
             tarefa["status"] = "Pendente"
+            tarefa["subtarefas"] = []
             core.tarefas.append(tarefa)
             core.proximo_id += 1
             core.salvar_tarefas()
@@ -121,6 +141,9 @@ class Handler(BaseHTTPRequestHandler):
         self._responder(200, tarefa)
 
     def do_DELETE(self):
+        achou = re.fullmatch(r"/api/tarefas/(\d+)/subtarefas/(\d+)", self.path)
+        if achou:
+            return self._remover_subtarefa(int(achou.group(1)), int(achou.group(2)))
         achou = re.fullmatch(r"/api/tarefas/(\d+)", self.path)
         if not achou:
             return self._responder(404, {"erro": "Não encontrado."})
@@ -133,6 +156,59 @@ class Handler(BaseHTTPRequestHandler):
             core.tarefas.remove(tarefa)
             core.salvar_tarefas()
         self._responder(200, {"id": id_tarefa, "excluida": True})
+
+    def do_PATCH(self):
+        achou = re.fullmatch(r"/api/tarefas/(\d+)/subtarefas/(\d+)", self.path)
+        if not achou:
+            return self._responder(404, {"erro": "Não encontrado."})
+        return self._marcar_subtarefa(int(achou.group(1)), int(achou.group(2)))
+
+    # ---------- subtasks ----------
+    def _adicionar_subtarefa(self, id_tarefa):
+        dados = self._ler_json()
+        if dados is None:
+            return self._responder(400, {"erro": "Requisição inválida."})
+        titulo = str(dados.get("titulo", "")).strip()
+        if not titulo:
+            return self._responder(400, {"erro": "O título da subtask é obrigatório."})
+        if len(titulo) > TAMANHO_MAX_SUBTAREFA:
+            return self._responder(
+                400, {"erro": f"A subtask pode ter no máximo {TAMANHO_MAX_SUBTAREFA} caracteres."})
+
+        with trava:
+            tarefa = buscar_tarefa(id_tarefa)
+            if tarefa is None:
+                return self._responder(404, {"erro": "Tarefa não encontrada."})
+            # setdefault: tarefas antigas (sem o campo) passam a ter a lista
+            subtarefas = tarefa.setdefault("subtarefas", [])
+            novo_id = max((s["id"] for s in subtarefas), default=0) + 1
+            subtarefas.append({"id": novo_id, "titulo": titulo, "concluida": False})
+            core.salvar_tarefas()
+        self._responder(201, tarefa)
+
+    def _marcar_subtarefa(self, id_tarefa, id_sub):
+        dados = self._ler_json()
+        if dados is None or not isinstance(dados.get("concluida"), bool):
+            return self._responder(400, {"erro": "Informe concluida como true ou false."})
+
+        with trava:
+            tarefa = buscar_tarefa(id_tarefa)
+            sub = next((x for x in (tarefa or {}).get("subtarefas", []) if x["id"] == id_sub), None)
+            if sub is None:
+                return self._responder(404, {"erro": "Subtask não encontrada."})
+            sub["concluida"] = dados["concluida"]
+            core.salvar_tarefas()
+        self._responder(200, tarefa)
+
+    def _remover_subtarefa(self, id_tarefa, id_sub):
+        with trava:
+            tarefa = buscar_tarefa(id_tarefa)
+            sub = next((x for x in (tarefa or {}).get("subtarefas", []) if x["id"] == id_sub), None)
+            if sub is None:
+                return self._responder(404, {"erro": "Subtask não encontrada."})
+            tarefa["subtarefas"].remove(sub)
+            core.salvar_tarefas()
+        self._responder(200, tarefa)
 
     def log_message(self, *args):  # silencia o log de cada requisição
         pass

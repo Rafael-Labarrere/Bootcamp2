@@ -60,6 +60,23 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .tag.ok{--c:var(--baixa)}.tag.and{--c:var(--media)}
 select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit}
 select:focus{outline:none;border-color:var(--brand)}
+.progresso{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:12px}
+.progresso>i{display:block;height:100%;width:var(--p);background:var(--baixa);transition:width .3s}
+.sub-toggle{margin-top:10px;border:0;background:transparent;color:var(--brand);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:6px}
+.sub-toggle:hover{color:var(--brand-d);text-decoration:underline}
+.sub-toggle .seta{display:inline-block;transition:transform .2s}
+.sub-toggle[aria-expanded=true] .seta{transform:rotate(90deg)}
+.subs{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:2px}
+.subs[hidden]{display:none}
+.subs label{display:flex;align-items:center;gap:10px;margin:0;font-weight:400;font-size:.92rem;padding:6px 8px;border-radius:8px;cursor:pointer;overflow-wrap:anywhere}
+.subs label:hover{background:color-mix(in srgb,var(--brand) 8%,transparent)}
+.subs input[type=checkbox]{width:18px;height:18px;margin:0;flex:none;accent-color:var(--brand);cursor:pointer}
+.subs li.feita span{text-decoration:line-through;color:var(--muted)}
+.sub-form{display:flex;gap:8px}.sub-form input{flex:1;min-width:0}
+.btn.mini{margin:0;width:auto;padding:0 16px;white-space:nowrap}
+.subs.editor{margin-top:10px}
+.subs.editor li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 2px;font-size:.9rem;overflow-wrap:anywhere}
+.subs.editor li.nada{color:var(--muted)}
 #toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,80px);background:var(--baixa);color:#fff;padding:11px 20px;border-radius:99px;font-weight:600;box-shadow:var(--shadow);transition:.3s;opacity:0}
 #toast.on{transform:translate(-50%,0);opacity:1}
 </style>
@@ -85,6 +102,14 @@ select:focus{outline:none;border-color:var(--brand)}
       <div id="blocoStatus" hidden>
         <label for="status">Status</label>
         <select id="status"><option>Pendente</option><option>Em andamento</option><option>Concluída</option></select>
+      </div>
+      <div id="blocoSubs" hidden>
+        <label for="novaSub">Subtasks <small>(adicionadas na hora)</small></label>
+        <div class="sub-form">
+          <input type="text" id="novaSub" maxlength="120" autocomplete="off" placeholder="Ex.: Reunir dados do trimestre">
+          <button class="btn mini" type="button" id="btnAddSub">+ Adicionar</button>
+        </div>
+        <ul class="subs editor" id="listaSubsForm"></ul>
       </div>
       <div class="erro" id="erro" role="alert"></div>
       <button class="btn" type="submit" id="btnSalvar">Cadastrar tarefa</button>
@@ -112,6 +137,7 @@ select:focus{outline:none;border-color:var(--brand)}
 <script>
 const COR={Alta:"var(--alta)","Média":"var(--media)",Baixa:"var(--baixa)"};
 let tarefas=[],filtro="Todas",editandoId=null,confirmandoId=null;
+const abertas=new Set(); // IDs das tarefas com o dropdown de subtasks aberto
 const $=id=>document.getElementById(id);
 
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
@@ -121,16 +147,16 @@ function dataISO(br){const p=br.split("/");return p.length===3?`${p[2]}-${p[1]}-
 function modoEdicao(t){
   editandoId=t?t.id:null;
   const ed=!!t;
-  $("tituloForm").textContent=ed?`Editando tarefa #${t.id}`:"Nova tarefa";
+  $("tituloForm").textContent=ed?`Personalizando tarefa #${t.id}`:"Nova tarefa";
   $("btnSalvar").textContent=ed?"Salvar alterações":"Cadastrar tarefa";
-  $("btnCancelar").hidden=!ed;$("blocoStatus").hidden=!ed;
+  $("btnCancelar").hidden=!ed;$("blocoStatus").hidden=!ed;$("blocoSubs").hidden=!ed;
   $("cardForm").classList.toggle("editando",ed);
   erro("");
   if(ed){
     $("titulo").value=t.titulo;$("descricao").value=t.descricao;
     document.querySelector(`input[name=prioridade][value="${t.prioridade}"]`).checked=true;
     $("data").value=dataISO(t.data_limite);$("status").value=t.status;
-    $("titulo").focus();$("cardForm").scrollIntoView({behavior:"smooth",block:"nearest"});
+    desenharSubsForm();$("titulo").focus();$("cardForm").scrollIntoView({behavior:"smooth",block:"nearest"});
   }else{$("form").reset()}
 }
 
@@ -156,7 +182,7 @@ function desenharLista(lista,itens,mensagemVazia){
     if(t.status==="Concluída")c.classList.add("fim");
     const h=el("h3");h.append(el("span",0,t.titulo));
     const dir=el("span");
-    const be=el("button","ed","✏️ Editar");be.type="button";be.onclick=()=>modoEdicao(t);
+    const be=el("button","ed","⚙️ Personalizar tasks");be.type="button";be.onclick=()=>modoEdicao(t);
     dir.append(be," ");
     if(confirmandoId===t.id){
       const q=el("span","conf","Excluir?");
@@ -171,7 +197,82 @@ function desenharLista(lista,itens,mensagemVazia){
     if(t.descricao)c.append(el("p",0,t.descricao));
     const tags=el("div","tags");const p=el("span","tag","Prioridade "+t.prioridade);p.style.setProperty("--c",COR[t.prioridade]);
     tags.append(p,el("span","tag n","📅 "+(t.data_limite||"Sem prazo")),el("span","tag "+(t.status==="Concluída"?"ok":t.status==="Em andamento"?"and":"n"),t.status));
-    c.append(tags);lista.append(c)});
+    const subs=t.subtarefas||[];
+    const feitas=subs.filter(x=>x.concluida).length;
+    if(subs.length)tags.append(el("span","tag "+(feitas===subs.length?"ok":"n"),`☑ ${feitas}/${subs.length}`));
+    c.append(tags);
+    if(subs.length){
+      const prog=el("div","progresso");const barra=el("i");
+      barra.style.setProperty("--p",Math.round(feitas/subs.length*100)+"%");prog.append(barra);c.append(prog);
+      const aberto=abertas.has(t.id);
+      const ul=el("ul","subs");ul.id=`subs-${t.id}`;ul.hidden=!aberto;
+      subs.forEach(x=>ul.append(itemSub(t,x)));
+      const bt=el("button","sub-toggle");bt.type="button";
+      bt.setAttribute("aria-expanded",aberto);bt.setAttribute("aria-controls",ul.id);
+      bt.append(el("span","seta","▸"),el("span",0,"Visualizar subtasks"));
+      bt.onclick=()=>{ // alterna sem redesenhar, para o foco do teclado não se perder
+        const abrir=ul.hidden;ul.hidden=!abrir;bt.setAttribute("aria-expanded",abrir);
+        if(abrir)abertas.add(t.id);else abertas.delete(t.id)};
+      c.append(bt,ul);
+    }
+    lista.append(c)});
+}
+
+function itemSub(t,x){
+  const li=el("li",x.concluida?"feita":"");const lb=el("label");
+  const cb=document.createElement("input");cb.type="checkbox";cb.checked=x.concluida;cb.id=`sub-${t.id}-${x.id}`;
+  cb.onchange=()=>marcarSub(t.id,x.id,cb.checked);
+  lb.append(cb,el("span",0,x.titulo));li.append(lb);return li;
+}
+
+function atualizar(d){tarefas=tarefas.map(t=>t.id===d.id?d:t)}
+
+function desenharSubsForm(){
+  const ul=$("listaSubsForm");ul.replaceChildren();
+  const t=tarefas.find(x=>x.id===editandoId);if(!t)return;
+  const subs=t.subtarefas||[];
+  if(!subs.length){ul.append(el("li","nada","Nenhuma subtask cadastrada."));return}
+  subs.forEach(x=>{
+    const li=el("li");li.append(el("span",0,(x.concluida?"✔ ":"")+x.titulo));
+    const b=el("button","ed del","Remover");b.type="button";
+    b.setAttribute("aria-label","Remover subtask "+x.titulo);b.onclick=()=>removerSub(t.id,x.id);
+    li.append(b);ul.append(li)});
+}
+
+async function chamar(url,metodo,corpo){
+  const r=await fetch(url,{method:metodo,headers:{"Content-Type":"application/json"},body:corpo?JSON.stringify(corpo):undefined});
+  return{ok:r.ok,dados:await r.json()};
+}
+
+async function adicionarSub(){
+  if(editandoId===null)return;
+  const campo=$("novaSub"),titulo=campo.value.trim();
+  if(!titulo){erro("Digite o título da subtask.");campo.focus();return}
+  erro("");
+  try{
+    const{ok,dados}=await chamar(`/api/tarefas/${editandoId}/subtarefas`,"POST",{titulo});
+    if(!ok){erro(dados.erro||"Erro ao adicionar subtask.");return}
+    atualizar(dados);campo.value="";desenhar();desenharSubsForm();campo.focus();toast("Subtask adicionada!");
+  }catch{erro("Não foi possível conectar ao servidor.")}
+}
+
+async function removerSub(idTarefa,idSub){
+  try{
+    const{ok,dados}=await chamar(`/api/tarefas/${idTarefa}/subtarefas/${idSub}`,"DELETE");
+    if(!ok){toast(dados.erro||"Erro ao remover subtask.",true);return}
+    atualizar(dados);desenhar();desenharSubsForm();toast("Subtask removida.");
+  }catch{toast("Não foi possível conectar ao servidor.",true)}
+}
+
+async function marcarSub(idTarefa,idSub,concluida){
+  const foco=document.activeElement&&document.activeElement.id; // restaura o foco após redesenhar
+  try{
+    const{ok,dados}=await chamar(`/api/tarefas/${idTarefa}/subtarefas/${idSub}`,"PATCH",{concluida});
+    if(!ok){toast(dados.erro||"Erro ao atualizar subtask.",true);await carregar();return}
+    atualizar(dados);
+  }catch{toast("Não foi possível conectar ao servidor.",true)}
+  desenhar();if(editandoId!==null)desenharSubsForm();
+  if(foco&&$(foco))$(foco).focus();
 }
 
 async function excluir(t){
@@ -210,6 +311,8 @@ $("form").addEventListener("submit",async ev=>{
   }catch{erro("Não foi possível conectar ao servidor.")}
 });
 $("btnCancelar").onclick=()=>modoEdicao(null);
+$("btnAddSub").onclick=adicionarSub;
+$("novaSub").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();adicionarSub()}});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
   if(confirmandoId!==null){confirmandoId=null;desenhar()}else if(editandoId!==null)modoEdicao(null)});
 $("descricao").addEventListener("keydown",e=>{if(e.ctrlKey&&e.key==="Enter")$("form").requestSubmit()});
